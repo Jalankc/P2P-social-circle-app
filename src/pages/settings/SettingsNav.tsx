@@ -1,31 +1,36 @@
 import { memo } from 'react'
 import { motion } from 'framer-motion'
 import {
-  User, Shield, HardDrive, Users, Eye, Bell, Palette, Radio, Code, LogOut, Bot,
+  User, Shield, HardDrive, Users, Eye, Bell, Palette, Radio, Code, LogOut,
+  PenLine, AlertTriangle, Bot,
 } from 'lucide-react'
 
 export type TabKey =
   | 'profile-faces'
+  | 'signature'
   | 'encryption'
   | 'chunks'
   | 'friends'
   | 'privacy'
+  | 'content-advisory'
   | 'notifications'
+  | 'clawbot'
   | 'appearance'
   | 'network'
-  | 'clawbot'
   | 'developer'
 
 const tabs: { key: TabKey; label: string; icon: typeof User; badge?: string }[] = [
   { key: 'profile-faces', label: 'Profile Faces', icon: User },
+  { key: 'signature', label: 'Signature', icon: PenLine },
   { key: 'encryption', label: 'Encryption', icon: Shield },
   { key: 'chunks', label: 'Chunks & Backup', icon: HardDrive, badge: '3 pending' },
   { key: 'friends', label: 'Friends & Circles', icon: Users },
   { key: 'privacy', label: 'Privacy', icon: Eye },
+  { key: 'content-advisory', label: 'Content Advisory', icon: AlertTriangle },
   { key: 'notifications', label: 'Notifications', icon: Bell, badge: '12' },
+  { key: 'clawbot', label: 'Clawbot', icon: Bot },
   { key: 'appearance', label: 'Appearance', icon: Palette },
   { key: 'network', label: 'Network & P2P', icon: Radio },
-  { key: 'clawbot', label: 'Clawbot', icon: Bot },
   { key: 'developer', label: 'Developer', icon: Code },
 ]
 

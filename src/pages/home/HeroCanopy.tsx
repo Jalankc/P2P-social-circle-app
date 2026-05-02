@@ -5,7 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-export default function HeroCanopy({ onCreateNode }: { onCreateNode?: () => void }) {
+export default function HeroCanopy() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const badgeRef = useRef<HTMLDivElement>(null)
@@ -291,8 +291,8 @@ export default function HeroCanopy({ onCreateNode }: { onCreateNode?: () => void
           style={{ transform: 'translateY(20px)' }}
         >
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={onCreateNode}
+            <Link
+              to="/onboarding"
               className="inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold uppercase text-sp-bark transition-all hover:scale-[1.03]"
               style={{
                 background: 'var(--sp-amber)',
@@ -300,14 +300,14 @@ export default function HeroCanopy({ onCreateNode }: { onCreateNode?: () => void
                 boxShadow: '0 4px 20px rgba(212, 160, 23, 0.3)',
               }}
             >
-              Create Your Node
-            </button>
-            <button
-              onClick={() => scrollToSection('chunk-network')}
+              Join the Circle
+            </Link>
+            <Link
+              to="/login"
               className="inline-flex items-center rounded-full border-[1.5px] border-sp-fern px-6 py-3 text-sm font-medium text-sp-fern transition-colors hover:bg-sp-fern/10"
             >
-              See How It Works
-            </button>
+              Sign In
+            </Link>
           </div>
           <p className="text-xs text-sp-parchment/60">
             Free forever. No ads we control. Your data lives where you put it.

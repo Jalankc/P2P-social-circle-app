@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { Terminal, Copy, Download, FlaskConical, Code, Trash2, Wifi, Zap } from 'lucide-react'
-import MatrixRain from './MatrixRain'
+import MatrixRain from '../home/MatrixRain'
 
 const initialLogs = [
   { time: '14:32:01', level: 'info', message: 'Peer connected: reed.p2p (latency 45ms)' },

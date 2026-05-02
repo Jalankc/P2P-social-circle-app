@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import type { Conversation, Message } from './types'
 import { scrambleChars } from './data'
-import MatrixRain from './MatrixRain'
+import MatrixRain from '../home/MatrixRain'
 
 interface ChatThreadProps {
   conversation: Conversation | null

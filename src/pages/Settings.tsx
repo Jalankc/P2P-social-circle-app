@@ -2,22 +2,28 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SettingsNav, { type TabKey } from './settings/SettingsNav'
 import ProfileFacesPanel from './settings/ProfileFacesPanel'
+import SignaturePanel from './settings/SignaturePanel'
 import EncryptionPanel from './settings/EncryptionPanel'
 import ChunksBackupPanel from './settings/ChunksBackupPanel'
 import FriendsCirclesPanel from './settings/FriendsCirclesPanel'
 import PrivacyPanel from './settings/PrivacyPanel'
+import ContentAdvisoryPanel from './settings/ContentAdvisoryPanel'
 import NotificationsPanel from './settings/NotificationsPanel'
+import ClawbotPanel from './settings/ClawbotPanel'
 import AppearancePanel from './settings/AppearancePanel'
 import NetworkP2PPanel from './settings/NetworkP2PPanel'
 import DeveloperPanel from './settings/DeveloperPanel'
 
 const panels: Record<TabKey, React.ComponentType> = {
   'profile-faces': ProfileFacesPanel,
+  'signature': SignaturePanel,
   'encryption': EncryptionPanel,
   'chunks': ChunksBackupPanel,
   'friends': FriendsCirclesPanel,
   'privacy': PrivacyPanel,
+  'content-advisory': ContentAdvisoryPanel,
   'notifications': NotificationsPanel,
+  'clawbot': ClawbotPanel,
   'appearance': AppearancePanel,
   'network': NetworkP2PPanel,
   'developer': DeveloperPanel,

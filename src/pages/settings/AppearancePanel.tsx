@@ -1,6 +1,7 @@
-import { useState, memo } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { motion } from 'framer-motion'
-import { Sun, Moon, Monitor, Type, EyeOff, Droplets } from 'lucide-react'
+import { Sun, Moon, Monitor, Type, EyeOff, Droplets, Activity } from 'lucide-react'
+import { openDB, getSetting, setSetting } from '../../lib/db'
 
 const themes = [
   { key: 'dark-forest', label: 'Dark Forest', icon: Moon, colors: ['#0f291e', '#2d6a4f', '#52b788'] },
@@ -24,6 +25,23 @@ const AppearancePanel = memo(function AppearancePanel() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const [highContrast, setHighContrast] = useState(false)
   const [matrixIntensity, setMatrixIntensity] = useState(5)
+  const [showCommonsBar, setShowCommonsBar] = useState(true)
+
+  useEffect(() => {
+    openDB()
+      .then((db) => getSetting<boolean>(db, 'showCommonsBar'))
+      .then((v) => { if (v !== null) setShowCommonsBar(v) })
+      .catch(() => {})
+  }, [])
+
+  async function toggleCommonsBar() {
+    const next = !showCommonsBar
+    setShowCommonsBar(next)
+    try {
+      const db = await openDB()
+      await setSetting(db, 'showCommonsBar', next)
+    } catch { /* no-op */ }
+  }
 
   return (
     <div className="space-y-6">
@@ -159,6 +177,21 @@ const AppearancePanel = memo(function AppearancePanel() {
               className={`relative h-5 w-9 rounded-full transition-colors ${highContrast ? 'bg-sp-fern' : 'bg-sp-moss/40'}`}
             >
               <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-sp-cream shadow transition-transform ${highContrast ? 'translate-x-4' : ''}`} />
+            </button>
+          </label>
+          <label className="flex items-center justify-between cursor-pointer">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-sp-parchment" />
+              <div>
+                <span className="text-sm text-sp-cream">Commons health bar</span>
+                <p className="text-[10px] text-sp-parchment opacity-60">Show network health strip below nav</p>
+              </div>
+            </div>
+            <button
+              onClick={toggleCommonsBar}
+              className={`relative h-5 w-9 rounded-full transition-colors ${showCommonsBar ? 'bg-sp-fern' : 'bg-sp-moss/40'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-sp-cream shadow transition-transform ${showCommonsBar ? 'translate-x-4' : ''}`} />
             </button>
           </label>
         </div>

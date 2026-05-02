@@ -1,7 +1,7 @@
 import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle, KeyRound, Flame, Lock, Unlock, ChevronDown } from 'lucide-react'
-import MatrixRain from './MatrixRain'
+import MatrixRain from '../home/MatrixRain'
 
 const devices = [
   { name: 'MacBook Pro M3', fingerprint: 'a3:f7:9c:2b:e1:4d:88:12:5f:aa:01', verified: true },

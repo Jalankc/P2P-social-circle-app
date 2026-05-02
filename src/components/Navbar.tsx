@@ -1,14 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Leaf } from 'lucide-react'
+import CommonsHealthBar from './CommonsHealthBar'
+import { openDB, getSetting, getClawbotConfig } from '../lib/db'
 
 const navLinks = [
-  { label: 'Forum', to: '/feed' },
+  { label: 'Forum',   to: '/feed' },
   { label: 'Explore', to: '/explore' },
-  { label: 'Talk', to: '/talk' },
-  { label: 'Store', to: '/store' },
-  { label: 'Build', to: '/build' },
+  { label: 'Commons', to: '/commons' },
+  { label: 'Talk',    to: '/talk' },
+  { label: 'Store',   to: '/store' },
+  { label: 'Build',   to: '/build' },
   { label: 'Settings', to: '/settings' },
 ]
 
@@ -21,11 +24,26 @@ function cn(...classes: (string | false | null | undefined)[]) {
    ═══════════════════════════════════════════ */
 
 function CompensationWallet() {
+  const [yBalance, setYBalance] = useState<number | null>(null)
+
+  useEffect(() => {
+    openDB()
+      .then((db) => getClawbotConfig(db))
+      .then((cfg) => { if (cfg?.enabled) setYBalance(cfg.yBalance) })
+      .catch(() => {})
+  }, [])
+
   return (
     <div
       className="hidden lg:flex items-center gap-2 font-mono text-[10px]"
       style={{ color: 'var(--sp-parchment)' }}
     >
+      {yBalance !== null && (
+        <>
+          <span className="text-sp-amber" title="AI Y-Dimension balance">\uD83E\uDD16 {yBalance.toLocaleString()}Y</span>
+          <span style={{ color: 'rgba(45, 106, 79, 0.4)' }}>|</span>
+        </>
+      )}
       <span className="text-sp-parchment/50 uppercase tracking-wider">Comp:</span>
       <span className="text-sp-cream">1.2K</span>
       <span style={{ color: 'rgba(45, 106, 79, 0.4)' }}>|</span>
@@ -51,9 +69,18 @@ function CompensationWallet() {
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [showHealthBar, setShowHealthBar] = useState(true)
   const location = useLocation()
 
+  useEffect(() => {
+    openDB()
+      .then((db) => getSetting<boolean>(db, 'showCommonsBar'))
+      .then((v) => { if (v !== null) setShowHealthBar(v) })
+      .catch(() => {})
+  }, [])
+
   return (
+    <>
     <nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
@@ -168,5 +195,9 @@ export default function Navbar() {
         )}
       </AnimatePresence>
     </nav>
+    <div className="fixed top-8 left-0 right-0 z-40">
+      <CommonsHealthBar visible={showHealthBar} />
+    </div>
+    </>
   )
 }

@@ -5,8 +5,13 @@ import {
   ChevronRight, Send, Lock, Pin, Users, MessageSquare,
   ArrowLeft,
   Cog, MessageCircle, Lightbulb, Leaf,
-  Play,
+  Play, Plus,
 } from 'lucide-react'
+import {
+  openDB, getIdentity, getShouts, saveShout, getThreads, saveThread,
+  getReplies, saveReply, getGroupings, getTopics, seedDefaultForum,
+} from '../lib/db'
+import type { Identity, Shout as DbShout, Thread as DbThread, Reply as DbReply } from '../lib/db'
 
 /* ═══════════════════════════════════════════
    TYPES
@@ -822,7 +827,15 @@ function ThreadHeader({
    REPLY BOX
    ═══════════════════════════════════════════ */
 
-function ReplyBox({ userSignature }: { userSignature: string }) {
+function ReplyBox({
+  userSignature, threadId, forumDid, identity, onPosted,
+}: {
+  userSignature: string
+  threadId?: string
+  forumDid?: string
+  identity?: Identity | null
+  onPosted?: (reply: DbReply) => void
+}) {
   const [text, setText] = useState('')
   const [audience, setAudience] = useState<AudienceType>('public')
   const [showPreview, setShowPreview] = useState(false)
@@ -881,6 +894,29 @@ function ReplyBox({ userSignature }: { userSignature: string }) {
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-2">
             <button
+              onClick={async () => {
+                if (!text.trim()) return
+                const body = text.trim()
+                if (threadId && forumDid && identity) {
+                  const reply: DbReply = {
+                    replyId: crypto.randomUUID(),
+                    threadId,
+                    forumDid,
+                    authorDid: identity.did,
+                    authorHandle: identity.faces.primary.handle,
+                    body,
+                    createdAt: Date.now(),
+                  }
+                  try {
+                    const db = await openDB()
+                    await saveReply(db, reply)
+                    onPosted?.(reply)
+                    setText('')
+                  } catch { /* no-op */ }
+                } else {
+                  setText('')
+                }
+              }}
               className="px-4 py-1.5 font-retro text-[11px] uppercase text-sp-cream transition-colors hover:bg-sp-moss/80"
               style={{
                 background: 'var(--sp-moss)',
@@ -926,10 +962,24 @@ function ReplyBox({ userSignature }: { userSignature: string }) {
    THREAD VIEW (Main)
    ═══════════════════════════════════════════ */
 
-function ThreadView({ thread, onBack }: { thread: ThreadData; onBack: () => void }) {
+function ThreadView({
+  thread, onBack, dbThread, forumDid, identity,
+}: {
+  thread: ThreadData
+  onBack: () => void
+  dbThread?: DbThread | null
+  forumDid?: string
+  identity?: Identity | null
+}) {
   const [posts, setPosts] = useState(thread.posts)
+  const [dbReplies, setDbReplies] = useState<DbReply[]>([])
   const [userReactions, setUserReactions] = useState<Record<string, Record<CurrencyType, boolean>>>({})
   const [floatingAnim, setFloatingAnim] = useState<{ id: string; type: CurrencyType } | null>(null)
+
+  useEffect(() => {
+    if (!dbThread) return
+    openDB().then(db => getReplies(db, dbThread.threadId)).then(setDbReplies).catch(() => {})
+  }, [dbThread])
 
   const handleReact = useCallback((postId: string, type: CurrencyType) => {
     setPosts((prev) =>
@@ -996,7 +1046,42 @@ function ThreadView({ thread, onBack }: { thread: ThreadData; onBack: () => void
       </div>
 
       {/* Reply Box */}
-      <ReplyBox userSignature={CURRENT_USER_SIGNATURE} />
+      <ReplyBox
+        userSignature={identity?.faces.primary.bio || CURRENT_USER_SIGNATURE}
+        threadId={dbThread?.threadId}
+        forumDid={forumDid}
+        identity={identity}
+        onPosted={(reply) => setDbReplies(prev => [...prev, reply])}
+      />
+      {/* Live db replies below mock posts */}
+      {dbReplies.length > 0 && (
+        <div style={{ border: '1px solid rgba(45,106,79,0.3)' }}>
+          {dbReplies.map((r, i) => (
+            <div
+              key={r.replyId}
+              className="flex gap-3 p-3"
+              style={{ borderBottom: i < dbReplies.length - 1 ? '1px solid rgba(45,106,79,0.2)' : 'none' }}
+            >
+              <div className="w-24 flex-shrink-0 text-center">
+                <img src="/avatar-default.jpg" alt="" className="h-8 w-8 object-cover mx-auto mb-1" style={{ border: '1px solid rgba(82,183,136,0.3)' }} />
+                <div className="font-mono text-[10px] text-sp-sapling">@{r.authorHandle}</div>
+                {r.synthetic && <div className="font-mono text-[8px] text-sp-amber mt-0.5">🤖 AI</div>}
+              </div>
+              <div className="flex-1 min-w-0">
+                {r.synthetic && r.syntheticNote && (
+                  <div className="mb-2 px-2 py-1 font-mono text-[9px]" style={{ border: '1px solid var(--sp-amber)', color: 'var(--sp-amber)', background: 'rgba(212,160,23,0.06)' }}>
+                    🤖 Posted by AI agent on behalf of @{r.authorHandle} — {r.syntheticNote}
+                  </div>
+                )}
+                <BBCodeHtml bbcode={r.body} className="text-sm text-sp-cream leading-relaxed" />
+                <div className="mt-1 font-mono text-[9px] text-sp-parchment opacity-50">
+                  {new Date(r.createdAt).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1035,19 +1120,48 @@ const MOCK_SHOUTS: Shout[] = [
 ]
 
 /* ─── TalkBox ─── */
-function TalkBox({ isOwner }: { isOwner: boolean }) {
+function TalkBox({ isOwner, forumDid, identity }: { isOwner: boolean; forumDid: string; identity: Identity | null }) {
   const [shouts, setShouts] = useState(MOCK_SHOUTS)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (!forumDid) return
+    openDB().then(db => getShouts(db, forumDid)).then(dbShouts => {
+      if (dbShouts.length > 0) {
+        setShouts(dbShouts.map(s => ({
+          id: s.shoutId,
+          author: s.authorHandle,
+          avatar: '/avatar-default.jpg',
+          message: s.body,
+          time: new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        })))
+      }
+    }).catch(() => {})
+  }, [forumDid])
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [shouts])
 
-  const send = () => {
-    if (!input.trim()) return
-    setShouts((s) => [...s, { id: Date.now().toString(), author: 'You', avatar: '/avatar-default.jpg', message: input.trim(), time: 'now' }])
+  const send = async () => {
+    if (!input.trim() || !identity) return
+    const text = input.trim()
     setInput('')
+    const handle = identity.faces.primary.handle
+    const optimistic = { id: Date.now().toString(), author: handle, avatar: '/avatar-default.jpg', message: text, time: 'now' }
+    setShouts(s => [...s, optimistic])
+    try {
+      const db = await openDB()
+      await saveShout(db, {
+        shoutId: crypto.randomUUID(),
+        forumDid,
+        authorDid: identity.did,
+        authorHandle: handle,
+        body: text,
+        createdAt: Date.now(),
+      })
+    } catch { /* no-op — already shown optimistically */ }
   }
 
   return (
@@ -1581,14 +1695,21 @@ function PulseStyles() {
    FORUM HOME VIEW WRAPPER
    ═══════════════════════════════════════════ */
 
-function ForumHomeView({ isOwner, onOpenThread }: { isOwner: boolean; onOpenThread: () => void }) {
+function ForumHomeView({
+  isOwner, onOpenThread, forumDid, identity,
+}: {
+  isOwner: boolean
+  onOpenThread: () => void
+  forumDid: string
+  identity: Identity | null
+}) {
   return (
     <div className="flex gap-3 items-start">
       <PulseStyles />
       <LeftSidebar />
       <div className="flex-1 min-w-0 space-y-3">
         <ForumBanner isOwner={isOwner} />
-        <TalkBox isOwner={isOwner} />
+        <TalkBox isOwner={isOwner} forumDid={forumDid} identity={identity} />
         <VblogWidget />
         <GroupsWidget />
         <CenterContent isOwner={isOwner} onOpenThread={onOpenThread} />
@@ -1602,20 +1723,49 @@ function ForumHomeView({ isOwner, onOpenThread }: { isOwner: boolean; onOpenThre
    MAIN PROFILE PAGE
    ═══════════════════════════════════════════ */
 
+function didToHandle(did: string) {
+  return did.replace('did:key:z', '').slice(0, 12)
+}
+
 export default function Profile() {
   const { handle } = useParams<{ handle: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  const isOwner = handle === 'demo' || !handle
+  const [identity, setIdentity] = useState<Identity | null>(null)
+  const [forumDid, setForumDid] = useState('')
+  const [isOwner, setIsOwner] = useState(false)
+  const [activeDbThread, setActiveDbThread] = useState<DbThread | null>(null)
 
-  /* Thread mode: ?topic=... triggers thread view */
+  useEffect(() => {
+    openDB().then(async (db) => {
+      const id = await getIdentity(db)
+      if (!id) return
+      setIdentity(id)
+      const localHandle = didToHandle(id.did)
+      // Match if URL handle equals local identity handle or legacy 'demo'
+      if (handle === localHandle || handle === 'demo' || !handle) {
+        setIsOwner(true)
+        setForumDid(id.did)
+        await seedDefaultForum(db, id.did)
+      }
+    }).catch(() => {})
+  }, [handle])
+
+  /* Thread mode: ?thread=... opens db thread; ?topic=welcome-grove opens mock */
   const topicParam = searchParams.get('topic')
-  const isThreadView = topicParam === 'welcome-grove'
+  const threadParam = searchParams.get('thread')
+  const isThreadView = topicParam === 'welcome-grove' || !!threadParam
 
-  const openThread = () => {
-    setSearchParams({ topic: 'welcome-grove' })
+  const openThread = (dbThread?: DbThread) => {
+    if (dbThread) {
+      setActiveDbThread(dbThread)
+      setSearchParams({ thread: dbThread.threadId })
+    } else {
+      setSearchParams({ topic: 'welcome-grove' })
+    }
   }
 
   const closeThread = () => {
+    setActiveDbThread(null)
     setSearchParams({})
   }
 
@@ -1634,9 +1784,20 @@ export default function Profile() {
       >
         <div className="mx-auto max-w-[1200px] px-3 py-4">
           {isThreadView ? (
-            <ThreadView thread={MOCK_THREAD} onBack={closeThread} />
+            <ThreadView
+              thread={MOCK_THREAD}
+              onBack={closeThread}
+              dbThread={activeDbThread}
+              forumDid={forumDid}
+              identity={identity}
+            />
           ) : (
-            <ForumHomeView isOwner={isOwner} onOpenThread={openThread} />
+            <ForumHomeView
+              isOwner={isOwner}
+              onOpenThread={() => openThread()}
+              forumDid={forumDid || 'demo'}
+              identity={identity}
+            />
           )}
         </div>
       </div>

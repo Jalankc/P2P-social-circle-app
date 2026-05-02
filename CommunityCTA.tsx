@@ -153,7 +153,7 @@ export default function CommunityCTA() {
             className="mb-3"
           >
             <Link
-              to="/build"
+              to="/onboarding"
               className="inline-flex items-center rounded-full px-8 py-4 text-base font-semibold uppercase text-sp-bark transition-all hover:scale-[1.03]"
               style={{
                 background: 'var(--sp-amber)',

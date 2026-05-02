@@ -182,6 +182,15 @@ const MOCK_THREAD: ThreadData = {
   ],
 }
 
+/* ─── Forum Settings Mock ─── */
+const FORUM_SETTINGS = {
+  aiTolerance: 50,
+  translation: {
+    enabled: true,
+    fromLanguage: 'Japanese',
+  },
+}
+
 /* ═══════════════════════════════════════════
    HELPER FUNCTIONS
    ═══════════════════════════════════════════ */
@@ -1102,6 +1111,7 @@ interface Topic {
   locked?: boolean
   pulse: number
   hashtags: string[]
+  heterodox?: boolean
 }
 
 const MOCK_TOPICS: Topic[] = [
@@ -1111,6 +1121,7 @@ const MOCK_TOPICS: Topic[] = [
   { id: '4', title: 'Introduce Yourself!', author: '@neon-leaf', replies: 203, views: '5.7K', lastPost: '1h ago', pulse: 67, hashtags: ['#intro', '#community'] },
   { id: '5', title: "What's Your P2P Setup?", author: '@solar-root', replies: 67, views: '1.8K', lastPost: '3h ago', pulse: 34, hashtags: ['#p2p', '#hardware'] },
   { id: '6', title: 'Read-Only: Archive of Old Growth', author: '@admin', replies: 12, views: '340', lastPost: '3d ago', locked: true, pulse: 3, hashtags: ['#archive'] },
+  { id: '7', title: 'Are Centralized Platforms Actually Better for Privacy?', author: '@contrarian_daisy', replies: 34, views: '1.1K', lastPost: '1h ago', pulse: 22, hashtags: ['#heterodox', '#privacy'], heterodox: true },
 ]
 
 /* ─── Pulse Indicator ─── */
@@ -1131,6 +1142,23 @@ function PulseIndicator({ score }: { score: number }) {
     >
       <span>⚡</span>
       <span>{score}</span>
+    </span>
+  )
+}
+
+/* ─── Heterodox Badge ─── */
+function HeterodoxBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 font-mono text-[9px] uppercase px-1.5 py-0.5"
+      style={{
+        border: '1px solid rgba(212,160,23,0.4)',
+        color: '#d4a017',
+        background: 'rgba(212,160,23,0.1)',
+        borderRadius: '2px',
+      }}
+    >
+      <span>🔄</span> Viewpoint Diversity
     </span>
   )
 }
@@ -1156,9 +1184,10 @@ function TopicRow({ topic, index, isLast, onClick }: { topic: Topic; index: numb
     >
       <div className="flex-shrink-0 w-8 flex items-center justify-center">{icon}</div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <PulseIndicator score={topic.pulse} />
           <p className={cn('text-sm font-medium truncate hover:underline', color)}>{topic.title}</p>
+          {topic.heterodox && <HeterodoxBadge />}
         </div>
         <p className="font-mono text-[11px] text-sp-parchment">
           by {topic.author} • {topic.lastPost}
@@ -1183,6 +1212,122 @@ function TopicRow({ topic, index, isLast, onClick }: { topic: Topic; index: numb
         <span className="font-mono text-[11px] text-sp-parchment">{topic.lastPost}</span>
         <ChevronRight className="h-3 w-3 text-sp-parchment" />
       </div>
+    </div>
+  )
+}
+
+/* ─── Translation Toggle ─── */
+function TranslationToggle() {
+  const [showOriginal, setShowOriginal] = useState(false)
+
+  return (
+    <div
+      className="flex items-center justify-between px-3 py-1.5"
+      style={{
+        border: '1px solid rgba(45,106,79,0.3)',
+        background: 'rgba(15,41,30,0.6)',
+        borderRadius: '0px',
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-sp-parchment">🌐</span>
+        <span className="font-mono text-[11px] text-sp-parchment">
+          Auto-translated from {FORUM_SETTINGS.translation.fromLanguage}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowOriginal(!showOriginal)}
+          className="px-2 py-0.5 font-mono text-[10px] transition-colors"
+          style={{
+            border: '1px solid rgba(45,106,79,0.4)',
+            background: showOriginal ? 'rgba(45,106,79,0.3)' : 'transparent',
+            color: showOriginal ? '#95d5b2' : '#e8e0cc',
+            borderRadius: '0px',
+          }}
+        >
+          {showOriginal ? 'Show Translation' : 'Original'}
+        </button>
+        <button
+          className="px-2 py-0.5 font-mono text-[10px] text-sp-parchment hover:text-sp-cream transition-colors"
+          style={{
+            border: '1px solid rgba(45,106,79,0.3)',
+            background: 'transparent',
+            borderRadius: '0px',
+          }}
+        >
+          Settings
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── AI Tolerance Indicator ─── */
+function AIToleranceIndicator({ tolerance }: { tolerance: number }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 px-2 py-1 font-mono text-[11px] transition-colors"
+        style={{
+          border: '1px solid rgba(45,106,79,0.4)',
+          background: 'rgba(15,41,30,0.6)',
+          borderRadius: '0px',
+          color: '#e8e0cc',
+        }}
+      >
+        <span>🤖</span>
+        <span>AI Tolerance: {tolerance}%</span>
+        <ChevronRight className="h-3 w-3 text-sp-parchment" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-1 z-50"
+              style={{
+                width: '260px',
+                background: 'var(--sp-canopy)',
+                border: '1px solid rgba(45,106,79,0.5)',
+                borderRadius: '0px',
+              }}
+            >
+              <div className="px-3 py-2" style={{ borderBottom: '1px solid rgba(45,106,79,0.2)' }}>
+                <span className="font-retro text-xs uppercase text-sp-amber">AI Tolerance</span>
+                <p className="font-mono text-[10px] text-sp-parchment mt-1">
+                  How much AI posting is allowed on this forum.
+                </p>
+              </div>
+              <div className="px-3 py-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[11px] text-sp-parchment">0% — No AI</span>
+                  <span className="font-mono text-[11px] text-sp-parchment">100% — Full AI</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  defaultValue={tolerance}
+                  className="w-full"
+                  style={{ accentColor: '#52b788' }}
+                />
+                <p className="font-mono text-[10px] text-sp-parchment" style={{ opacity: 0.6 }}>
+                  Current: {tolerance}% — AI pays {(tolerance > 0 ? (tolerance / 10).toFixed(1) : '0')}x Y-credits
+                </p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1237,6 +1382,10 @@ function ForumBanner({ isOwner }: { isOwner: boolean }) {
                 <Link to="/settings" className="font-mono text-[10px] hover:text-sp-sapling transition-colors" style={{ color: 'inherit' }}>Admin CP</Link>
               </>
             )}
+          </div>
+          {/* AI Tolerance */}
+          <div className="flex items-center justify-center md:justify-end w-full">
+            <AIToleranceIndicator tolerance={FORUM_SETTINGS.aiTolerance} />
           </div>
         </div>
       </div>
@@ -1587,6 +1736,7 @@ function ForumHomeView({ isOwner, onOpenThread }: { isOwner: boolean; onOpenThre
       <PulseStyles />
       <LeftSidebar />
       <div className="flex-1 min-w-0 space-y-3">
+        <TranslationToggle />
         <ForumBanner isOwner={isOwner} />
         <TalkBox isOwner={isOwner} />
         <VblogWidget />

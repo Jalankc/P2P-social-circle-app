@@ -194,11 +194,6 @@ export default function HeroCanopy() {
     return () => { tl.kill() }
   }, [])
 
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(id)
-    if (el) el.scrollIntoView({ behavior: 'smooth' })
-  }
-
   return (
     <section
       ref={sectionRef}
@@ -292,7 +287,7 @@ export default function HeroCanopy() {
         >
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              to="/build"
+              to="/onboarding"
               className="inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold uppercase text-sp-bark transition-all hover:scale-[1.03]"
               style={{
                 background: 'var(--sp-amber)',
@@ -300,14 +295,14 @@ export default function HeroCanopy() {
                 boxShadow: '0 4px 20px rgba(212, 160, 23, 0.3)',
               }}
             >
-              Plant Your Profile
+              Join the Circle
             </Link>
-            <button
-              onClick={() => scrollToSection('chunk-network')}
+            <Link
+              to="/login"
               className="inline-flex items-center rounded-full border-[1.5px] border-sp-fern px-6 py-3 text-sm font-medium text-sp-fern transition-colors hover:bg-sp-fern/10"
             >
-              See How It Works
-            </button>
+              Sign In
+            </Link>
           </div>
           <p className="text-xs text-sp-parchment/60">
             Free forever. No ads we control. Your data lives where you put it.

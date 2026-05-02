@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Leaf } from 'lucide-react'
 import CommonsHealthBar from './CommonsHealthBar'
-import { openDB, getSetting } from '../lib/db'
+import { openDB, getSetting, getClawbotConfig } from '../lib/db'
 
 const navLinks = [
   { label: 'Forum',   to: '/feed' },
@@ -24,11 +24,26 @@ function cn(...classes: (string | false | null | undefined)[]) {
    ═══════════════════════════════════════════ */
 
 function CompensationWallet() {
+  const [yBalance, setYBalance] = useState<number | null>(null)
+
+  useEffect(() => {
+    openDB()
+      .then((db) => getClawbotConfig(db))
+      .then((cfg) => { if (cfg?.enabled) setYBalance(cfg.yBalance) })
+      .catch(() => {})
+  }, [])
+
   return (
     <div
       className="hidden lg:flex items-center gap-2 font-mono text-[10px]"
       style={{ color: 'var(--sp-parchment)' }}
     >
+      {yBalance !== null && (
+        <>
+          <span className="text-sp-amber" title="AI Y-Dimension balance">\uD83E\uDD16 {yBalance.toLocaleString()}Y</span>
+          <span style={{ color: 'rgba(45, 106, 79, 0.4)' }}>|</span>
+        </>
+      )}
       <span className="text-sp-parchment/50 uppercase tracking-wider">Comp:</span>
       <span className="text-sp-cream">1.2K</span>
       <span style={{ color: 'rgba(45, 106, 79, 0.4)' }}>|</span>

@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { motion } from 'framer-motion'
 import {
-  User, Shield, HardDrive, Users, Eye, Bell, Palette, Radio, Code, LogOut,
+  User, Shield, HardDrive, Users, Eye, Bell, Palette, Radio, Code, LogOut, Bot,
 } from 'lucide-react'
 
 export type TabKey =
@@ -13,6 +13,7 @@ export type TabKey =
   | 'notifications'
   | 'appearance'
   | 'network'
+  | 'clawbot'
   | 'developer'
 
 const tabs: { key: TabKey; label: string; icon: typeof User; badge?: string }[] = [
@@ -24,6 +25,7 @@ const tabs: { key: TabKey; label: string; icon: typeof User; badge?: string }[] 
   { key: 'notifications', label: 'Notifications', icon: Bell, badge: '12' },
   { key: 'appearance', label: 'Appearance', icon: Palette },
   { key: 'network', label: 'Network & P2P', icon: Radio },
+  { key: 'clawbot', label: 'Clawbot', icon: Bot },
   { key: 'developer', label: 'Developer', icon: Code },
 ]
 

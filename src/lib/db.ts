@@ -2,7 +2,7 @@
 export const COMPENSATION_DECAY_DAYS = 90
 
 const DB_NAME = 'socialcircle'
-const DB_VERSION = 2
+const DB_VERSION = 4
 
 export interface KarmaVector {
   M: number // Materiality
@@ -81,6 +81,74 @@ export interface Message {
   createdAt: number
 }
 
+// ── Forum content types ───────────────────────────────────────────────────────
+
+export interface Shout {
+  shoutId: string
+  forumDid: string
+  authorDid: string
+  authorHandle: string
+  body: string
+  createdAt: number
+}
+
+export interface Grouping {
+  groupingId: string
+  forumDid: string
+  title: string
+  description: string
+  displayOrder: number
+  createdAt: number
+}
+
+export interface Topic {
+  topicId: string
+  groupingId: string
+  forumDid: string
+  title: string
+  description: string
+  displayOrder: number
+  createdAt: number
+}
+
+export interface Thread {
+  threadId: string
+  topicId: string
+  forumDid: string
+  authorDid: string
+  authorHandle: string
+  title: string
+  createdAt: number
+  replyCount: number
+  lastReplyAt: number
+  synthetic?: boolean
+}
+
+export interface Reply {
+  replyId: string
+  threadId: string
+  forumDid: string
+  authorDid: string
+  authorHandle: string
+  body: string
+  synthetic?: boolean
+  syntheticNote?: string
+  createdAt: number
+}
+
+// ── Clawbot config ────────────────────────────────────────────────────────────
+
+export type LeashRadius = 'home' | 'friends' | 'greater-circle' | 'open-swarm' | 'full-mesh'
+
+export interface ClawbotConfig {
+  id: 'singleton'
+  enabled: boolean
+  leashRadius: LeashRadius
+  apiKey: string
+  yBalance: number
+  createdAt: number
+}
+
 let _db: IDBDatabase | null = null
 
 export function openDB(idbFactory?: IDBFactory): Promise<IDBDatabase> {
@@ -124,6 +192,31 @@ export function openDB(idbFactory?: IDBFactory): Promise<IDBDatabase> {
         const evStore = db.createObjectStore('network_events', { keyPath: 'eventId' })
         evStore.createIndex('by_peer', 'peerId', { unique: false })
         evStore.createIndex('by_type', 'type', { unique: false })
+      }
+      // v3: forum content
+      if (!db.objectStoreNames.contains('shouts')) {
+        const s = db.createObjectStore('shouts', { keyPath: 'shoutId' })
+        s.createIndex('by_forum', 'forumDid', { unique: false })
+      }
+      if (!db.objectStoreNames.contains('groupings')) {
+        const s = db.createObjectStore('groupings', { keyPath: 'groupingId' })
+        s.createIndex('by_forum', 'forumDid', { unique: false })
+      }
+      if (!db.objectStoreNames.contains('topics')) {
+        const s = db.createObjectStore('topics', { keyPath: 'topicId' })
+        s.createIndex('by_grouping', 'groupingId', { unique: false })
+      }
+      if (!db.objectStoreNames.contains('threads')) {
+        const s = db.createObjectStore('threads', { keyPath: 'threadId' })
+        s.createIndex('by_topic', 'topicId', { unique: false })
+      }
+      if (!db.objectStoreNames.contains('replies')) {
+        const s = db.createObjectStore('replies', { keyPath: 'replyId' })
+        s.createIndex('by_thread', 'threadId', { unique: false })
+      }
+      // v4: clawbot configuration
+      if (!db.objectStoreNames.contains('clawbot_config')) {
+        db.createObjectStore('clawbot_config', { keyPath: 'id' })
       }
     }
     req.onsuccess = (e) => {
@@ -345,4 +438,119 @@ export async function getAllPeers(db: IDBDatabase): Promise<Peer[]> {
 export async function getAllChunks(db: IDBDatabase): Promise<Chunk[]> {
   const t = tx(db, 'chunks', 'readonly')
   return getAll<Chunk>(t.objectStore('chunks'))
+}
+
+// ── Shouts ────────────────────────────────────────────────────────────────────
+
+export async function saveShout(db: IDBDatabase, shout: Shout): Promise<void> {
+  const t = tx(db, 'shouts', 'readwrite')
+  return put(t.objectStore('shouts'), shout)
+}
+
+export async function getShouts(db: IDBDatabase, forumDid: string): Promise<Shout[]> {
+  const t = tx(db, 'shouts', 'readonly')
+  const all = await getAllByIndex<Shout>(t.objectStore('shouts'), 'by_forum', forumDid)
+  return all.sort((a, b) => b.createdAt - a.createdAt)
+}
+
+// ── Groupings ─────────────────────────────────────────────────────────────────
+
+export async function saveGrouping(db: IDBDatabase, g: Grouping): Promise<void> {
+  const t = tx(db, 'groupings', 'readwrite')
+  return put(t.objectStore('groupings'), g)
+}
+
+export async function getGroupings(db: IDBDatabase, forumDid: string): Promise<Grouping[]> {
+  const t = tx(db, 'groupings', 'readonly')
+  const all = await getAllByIndex<Grouping>(t.objectStore('groupings'), 'by_forum', forumDid)
+  return all.sort((a, b) => a.displayOrder - b.displayOrder)
+}
+
+// ── Topics ────────────────────────────────────────────────────────────────────
+
+export async function saveTopic(db: IDBDatabase, topic: Topic): Promise<void> {
+  const t = tx(db, 'topics', 'readwrite')
+  return put(t.objectStore('topics'), topic)
+}
+
+export async function getTopics(db: IDBDatabase, groupingId: string): Promise<Topic[]> {
+  const t = tx(db, 'topics', 'readonly')
+  const all = await getAllByIndex<Topic>(t.objectStore('topics'), 'by_grouping', groupingId)
+  return all.sort((a, b) => a.displayOrder - b.displayOrder)
+}
+
+// ── Threads ───────────────────────────────────────────────────────────────────
+
+export async function saveThread(db: IDBDatabase, thread: Thread): Promise<void> {
+  const t = tx(db, 'threads', 'readwrite')
+  return put(t.objectStore('threads'), thread)
+}
+
+export async function getThreads(db: IDBDatabase, topicId: string): Promise<Thread[]> {
+  const t = tx(db, 'threads', 'readonly')
+  const all = await getAllByIndex<Thread>(t.objectStore('threads'), 'by_topic', topicId)
+  return all.sort((a, b) => b.lastReplyAt - a.lastReplyAt)
+}
+
+export async function getThread(db: IDBDatabase, threadId: string): Promise<Thread | null> {
+  const t = tx(db, 'threads', 'readonly')
+  return get<Thread>(t.objectStore('threads'), threadId)
+}
+
+// ── Replies ───────────────────────────────────────────────────────────────────
+
+export async function saveReply(db: IDBDatabase, reply: Reply): Promise<void> {
+  const t = tx(db, 'replies', 'readwrite')
+  return put(t.objectStore('replies'), reply)
+}
+
+export async function getReplies(db: IDBDatabase, threadId: string): Promise<Reply[]> {
+  const t = tx(db, 'replies', 'readonly')
+  const all = await getAllByIndex<Reply>(t.objectStore('replies'), 'by_thread', threadId)
+  return all.sort((a, b) => a.createdAt - b.createdAt)
+}
+
+// ── Forum seeding ─────────────────────────────────────────────────────────────
+
+export async function seedDefaultForum(db: IDBDatabase, forumDid: string): Promise<void> {
+  const existing = await getGroupings(db, forumDid)
+  if (existing.length > 0) return
+  const now = Date.now()
+  const groupingId = crypto.randomUUID()
+  const topicId = crypto.randomUUID()
+  await saveGrouping(db, {
+    groupingId,
+    forumDid,
+    title: 'General',
+    description: 'General discussion',
+    displayOrder: 0,
+    createdAt: now,
+  })
+  await saveTopic(db, {
+    topicId,
+    groupingId,
+    forumDid,
+    title: 'Introductions',
+    description: 'Say hello to the commons.',
+    displayOrder: 0,
+    createdAt: now,
+  })
+}
+
+// ── Clawbot ───────────────────────────────────────────────────────────────────
+
+export async function getClawbotConfig(db: IDBDatabase): Promise<ClawbotConfig | null> {
+  const t = tx(db, 'clawbot_config', 'readonly')
+  return get<ClawbotConfig>(t.objectStore('clawbot_config'), 'singleton')
+}
+
+export async function saveClawbotConfig(db: IDBDatabase, config: ClawbotConfig): Promise<void> {
+  const t = tx(db, 'clawbot_config', 'readwrite')
+  return put(t.objectStore('clawbot_config'), config)
+}
+
+export function generateApiKey(): string {
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return 'sc1_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }

@@ -9,6 +9,7 @@ import PrivacyPanel from './settings/PrivacyPanel'
 import NotificationsPanel from './settings/NotificationsPanel'
 import AppearancePanel from './settings/AppearancePanel'
 import NetworkP2PPanel from './settings/NetworkP2PPanel'
+import ClawbotPanel from './settings/ClawbotPanel'
 import DeveloperPanel from './settings/DeveloperPanel'
 
 const panels: Record<TabKey, React.ComponentType> = {
@@ -20,6 +21,7 @@ const panels: Record<TabKey, React.ComponentType> = {
   'notifications': NotificationsPanel,
   'appearance': AppearancePanel,
   'network': NetworkP2PPanel,
+  'clawbot': ClawbotPanel,
   'developer': DeveloperPanel,
 }
 

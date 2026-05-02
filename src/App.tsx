@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import Profile from './pages/Profile'
 import UserProfile from './pages/UserProfile'
 import Store from './pages/Store'
+import Commons from './pages/Commons'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -24,6 +25,7 @@ function AnimatedRoutes() {
         <Route path="/build" element={<Layout><Build /></Layout>} />
         <Route path="/settings" element={<Layout><Settings /></Layout>} />
         <Route path="/store" element={<Layout><Store /></Layout>} />
+        <Route path="/commons" element={<Layout><Commons /></Layout>} />
         <Route path="/@:handle" element={<Layout><UserProfile /></Layout>} />
         <Route path="/:handle" element={<Layout><Profile /></Layout>} />
       </Routes>

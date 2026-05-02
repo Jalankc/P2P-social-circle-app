@@ -2,7 +2,7 @@
 export const COMPENSATION_DECAY_DAYS = 90
 
 const DB_NAME = 'socialcircle'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export interface KarmaVector {
   M: number // Materiality
@@ -33,6 +33,20 @@ export interface Peer {
   lastSeen: number
   createdAt: number
   updatedAt: number
+  bytesSeeded?: number   // cumulative bytes uploaded to this peer
+  bytesLeeched?: number  // cumulative bytes downloaded from this peer
+  chunksHostedForPeer?: number
+}
+
+export type NetworkEventType = 'chunk_sent' | 'chunk_received' | 'chunk_stored' | 'chunk_dropped'
+
+export interface NetworkEvent {
+  eventId: string
+  type: NetworkEventType
+  chunkId: string
+  peerId: string
+  bytes: number
+  createdAt: number
 }
 
 export interface Post {
@@ -104,6 +118,12 @@ export function openDB(idbFactory?: IDBFactory): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'key' })
+      }
+      // v2: network event log for seeding/leeching measurement
+      if (!db.objectStoreNames.contains('network_events')) {
+        const evStore = db.createObjectStore('network_events', { keyPath: 'eventId' })
+        evStore.createIndex('by_peer', 'peerId', { unique: false })
+        evStore.createIndex('by_type', 'type', { unique: false })
       }
     }
     req.onsuccess = (e) => {
@@ -291,9 +311,38 @@ export async function setSetting<T>(db: IDBDatabase, key: string, value: T): Pro
   return put(t.objectStore('settings'), { key, value })
 }
 
+// ── Network Events ────────────────────────────────────────────────────────────
+
+export async function saveNetworkEvent(db: IDBDatabase, event: NetworkEvent): Promise<void> {
+  const t = tx(db, 'network_events', 'readwrite')
+  return put(t.objectStore('network_events'), event)
+}
+
+export async function getNetworkEventsSince(
+  db: IDBDatabase,
+  sinceMs: number
+): Promise<NetworkEvent[]> {
+  const t = tx(db, 'network_events', 'readonly')
+  const all = await getAll<NetworkEvent>(t.objectStore('network_events'))
+  return all.filter((e) => e.createdAt >= sinceMs)
+}
+
+export async function getNetworkEventsByPeer(
+  db: IDBDatabase,
+  peerId: string
+): Promise<NetworkEvent[]> {
+  const t = tx(db, 'network_events', 'readonly')
+  return getAllByIndex<NetworkEvent>(t.objectStore('network_events'), 'by_peer', peerId)
+}
+
 // ── Bulk helpers ──────────────────────────────────────────────────────────────
 
 export async function getAllPeers(db: IDBDatabase): Promise<Peer[]> {
   const t = tx(db, 'peers', 'readonly')
   return getAll<Peer>(t.objectStore('peers'))
+}
+
+export async function getAllChunks(db: IDBDatabase): Promise<Chunk[]> {
+  const t = tx(db, 'chunks', 'readonly')
+  return getAll<Chunk>(t.objectStore('chunks'))
 }

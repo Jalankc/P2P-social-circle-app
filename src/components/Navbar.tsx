@@ -1,14 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Leaf } from 'lucide-react'
+import CommonsHealthBar from './CommonsHealthBar'
+import { openDB, getSetting } from '../lib/db'
 
 const navLinks = [
-  { label: 'Forum', to: '/feed' },
+  { label: 'Forum',   to: '/feed' },
   { label: 'Explore', to: '/explore' },
-  { label: 'Talk', to: '/talk' },
-  { label: 'Store', to: '/store' },
-  { label: 'Build', to: '/build' },
+  { label: 'Commons', to: '/commons' },
+  { label: 'Talk',    to: '/talk' },
+  { label: 'Store',   to: '/store' },
+  { label: 'Build',   to: '/build' },
   { label: 'Settings', to: '/settings' },
 ]
 
@@ -51,9 +54,18 @@ function CompensationWallet() {
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [showHealthBar, setShowHealthBar] = useState(true)
   const location = useLocation()
 
+  useEffect(() => {
+    openDB()
+      .then((db) => getSetting<boolean>(db, 'showCommonsBar'))
+      .then((v) => { if (v !== null) setShowHealthBar(v) })
+      .catch(() => {})
+  }, [])
+
   return (
+    <>
     <nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
@@ -168,5 +180,9 @@ export default function Navbar() {
         )}
       </AnimatePresence>
     </nav>
+    <div className="fixed top-8 left-0 right-0 z-40">
+      <CommonsHealthBar visible={showHealthBar} />
+    </div>
+    </>
   )
 }
